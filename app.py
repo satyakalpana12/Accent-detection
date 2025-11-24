@@ -4,7 +4,6 @@ import joblib
 import librosa
 import torch
 from transformers import Wav2Vec2FeatureExtractor, HubertModel
-from audiorecorder import audiorecorder
 
 # -------------------------------------------------
 # Load model
@@ -57,55 +56,24 @@ def extract_hubert(y):
 # STREAMLIT UI
 # -------------------------------------------------
 st.title("🎤 Native Language Accent Detection")
-st.write("Upload a **.wav** audio file OR record using microphone.")
+st.write("Upload a **.wav** audio file for prediction.")
 
-st.subheader("Choose Input Method")
-
-# -----------------------------
-# Upload option
-# -----------------------------
 uploaded_file = st.file_uploader("Upload your audio (.wav)", type=["wav"])
 
-# -----------------------------
-# Microphone option
-# -----------------------------
-st.write("Or record using microphone:")
-audio = audiorecorder("🎙️ Start Recording", "⏹️ Stop Recording")
-
-audio_data = None
-
-# If microphone audio exists
-if len(audio) > 0:
-    st.audio(audio.tobytes())
-    audio_data = audio.tobytes()
-
-# If file uploader used
 if uploaded_file is not None:
     st.audio(uploaded_file)
-    audio_data = uploaded_file.read()
 
-# -----------------------------
-# If audio is provided → predict
-# -----------------------------
-if audio_data is not None:
+    # Load audio
+    import tempfile
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        tmp.write(uploaded_file.read())
+        audio_path = tmp.name
 
-    # Load audio from bytes
-    try:
-        y, sr = librosa.load(
-            librosa.util.buf_to_float(audio_data),
-            sr=None
-        )
-    except:
-        # fallback for uploaded_file
-        import tempfile
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-            tmp.write(audio_data)
-            path = tmp.name
-        y, sr = librosa.load(path, sr=None)
+    y, sr = librosa.load(audio_path, sr=None)
 
+    # Preprocess → Extract embeddings → Predict
     y = preprocess_audio(y, sr)
     emb = extract_hubert(y)
-
     pred = clf.predict([emb])[0]
 
     st.success(f"### 🟢 Predicted Accent: **{pred}**")
