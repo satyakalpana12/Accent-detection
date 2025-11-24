@@ -1,0 +1,10 @@
+streamlit
+librosa
+soundfile
+numpy
+joblib
+transformers
+torch
+torchaudio
+audiorecorder
+matplotlib
